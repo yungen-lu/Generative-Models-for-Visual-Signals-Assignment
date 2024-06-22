@@ -20,7 +20,7 @@ Github: https://github.com/yungen-lu/Generative-Models-for-Visual-Signals-Assign
 
 我們可以借用 DDPM 訓練過程中『訓練多個 step 』的概念，在訓練的過程中不要讓 model 直接預測目標圖片，而是分成多個階段。先將目標圖片加上不同程度的 noise 產生不同階段的目標圖片，接著訓練 model 讓 model 預測一個稍微 denoised 的目標圖片，下一個階段再讓 model 預測一個更加 denoised 的目標圖片，如此重複直到最後預測的目標圖片為沒有加上 noise 的圖片。詳細步驟為以下：
 
-1. 將目標圖片加上不同程度的 noise。 level 1 為最輕微、 level n 為最重的 noise
+1. 將目標圖片加上不同程度的 noise。 level 1 為最輕微的 noise、 level n 為最重的 noise
 
    <img src="images/stage.png" alt="stage" style="zoom:72%;" />
 
@@ -32,7 +32,7 @@ Github: https://github.com/yungen-lu/Generative-Models-for-Visual-Signals-Assign
 
 ### Stage Scheduler
 
-每個階段目標圖片的 denoise 程度為何，需訓練幾次都是可調整的，本次實驗了以下幾種不同的方法：
+每個階段目標圖片的 denoise 程度為何、需在該階段訓練幾次都是可調整的參數。Stage Scheduler 的功能就是依照某個演算法指定該階段應該要訓練幾次，本次實驗了以下幾種不同的方法：
 
 1. uniform：假設設定的訓練次數為 1000，設定的 denoising stage 為 10，則每個 stage 的訓練次數皆為 1000/10 = 100
 
@@ -55,24 +55,25 @@ Github: https://github.com/yungen-lu/Generative-Models-for-Visual-Signals-Assign
 1. 要訓練多少 iteration 才能達到一定的預期的圖片品質？
 2. 如何在一定的 iteration 內達到一定的圖片品質？
 
-我們期望透過一步一步的『引導』model 預測目標圖片能夠讓我們能夠更精準的預測、控制 model 目前的能力（是否能生成出預期的圖片），並且期望能夠用比原始方法少的訓練次數達到相似的圖片品質或著在一定的 iteration 內達到比原始方法更好的圖片品質。
+我們期望透過一步一步的『引導』model 預測目標圖片能夠讓我們能夠更精準的預測、控制 model 目前的效能（是否能生成出預期的圖片），並且期望能夠用比原始方法少的訓練次數達到相似的圖片品質或著在一定的 iteration 內達到比原始方法更好的圖片品質。
 
 ### Limitations
 
 此方法有許多可能的問題與限制
 
 * 每張圖片的最佳訓練方法、訓練參數可能會不一樣，很難定義一個通用的方法能夠處理每一種不同的圖片，最多只能找到一種方法對大部分的圖片效果不錯。
-* 對於論文中提到的任務（denoising, inpainting ...）有可能會根據任務不同造成不同的
+* 對於論文中提到的任務（denoising, inpainting ...）有可能會需要根據任務的不同使用不同的訓練方法。
 
 
 
 ## Experiments
 
-我們使用 DIP 論文中的 denoising 任務作為，論文中實驗 denoising 的步驟為以下：
+我們使用 DIP 論文中的 denoising 任務作為主要的實驗目標，論文中實驗 denoising 的步驟為以下：
 
-1. 準備一張沒有 noise 的照片為 Gound Truth
-2. 在 Ground Truth 照片上增加 noise，當作 model 的 input
-3. 訓練人工加 noise 的照片，並計算 model 輸出的圖片與 Ground Truth 的 PSNR 值
+1. 準備一張沒有 noise 的圖片做為 Gound Truth
+2. 在 Ground Truth 圖片上增加 noise，當作 model 的 target output
+3. 產生 noise 作為 model input
+4. 訓練加了 noise 的照片，並計算 model 輸出的圖片與 Ground Truth 的 PSNR 值
 
 ### Baseline
 
@@ -94,6 +95,8 @@ PSNR/SSIM: model 輸出與訓練 target image 的 PSNR/SSIM
 PSNR_GT/SSIM_GT: model 輸出與 Ground Truth image 的 PSNR/SSIM
 
 ### Different Stage Scheduler
+
+藉著我們實驗不同的 Stage Scheduler 訓練出來的 model 會有什麼樣的效果。
 
 #### Uniform
 
@@ -211,7 +214,7 @@ SSIM
 
 此實驗驗證了將 DIP 結合 DDPM 訓練多個 step 的概念確實能讓 model 用更少的 training 次數達到相似的結果，然而此方法仍然有許多限制以及缺點是能夠改進的：
 
-* 此方法只能透過觀查 model 輸出與 Ground Truth 的 PSNR/SSIM 來決定 early stopping 的時機點，無法在不知道 Ground Truth 的情況下決定何時要 early stopping
+* 此方法只能透過觀察 model 輸出與 Ground Truth 的 PSNR/SSIM 來決定 early stopping 的時機點，無法在不知道 Ground Truth 的情況下決定何時要 early stopping
 * 此方法雖然能用更少的 training 次數達到與原始方法相似的結果，但是卻無法達到原始方法最好的結果（原始方法訓練  3000 個 iteration 後能夠達到更高的 PSNR 值）
 
 我認為可以嘗試透過以下方法改正這些問題：
